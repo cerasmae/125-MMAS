@@ -4,6 +4,16 @@ var canvas;
 var ctx;
 var globalY;
 var elmnt = document.body;
+var finished_ff = 0;
+var finished_wf = 0;
+var finished_bf = 0;
+var tp_ff = 0;
+var tp_wf = 0;
+var tp_bf = 0;
+var storage_ff = 0;
+var storage_wf = 0;
+var storage_bf = 0;
+var time = 0;
 elmnt.scrollRight += 500;
 
 canvas = document.getElementById("canvas");
@@ -32,15 +42,43 @@ function Memory(array){
 		return this.size - this.process.size;
 	}
 
-	this.occupied = function(){
+	this.used_memory = function(){
+		return this.process.size;
+	}
+
+	this.occupied = function(){ // returns true if process != null
 		return this.process != null;
 	}
 
-	this.processed = function(){
+	this.processed = function(type){
 		if(this.process != null){
-			if(this.process.time > 0){
+			if(this.process.time > 1){
 				this.process.time--;
 			} else{
+				if(type == 1){
+					finished_ff++;
+					if(time != 0){
+						// tp_ff += (finished_ff/time);
+						tp_ff = (finished_ff/time);
+						// console.log(tp_ff, finished_ff);
+					}
+				} else if(type == 2){
+					finished_wf++;
+					if(time != 0){
+						// tp_wf += (finished_wf/time);
+						tp_wf = (finished_wf/time);
+						// console.log(tp_wf, finished_wf);
+					}
+					
+				} else if(type == 3){
+					finished_bf++;
+					if(time != 0){
+						// tp_bf += (finished_bf/time);
+						tp_bf = (finished_bf/time);
+						// console.log(tp_bf, finished_bf);
+					}
+				}
+				// finished++;
 				this.process = null;
 			}
 		}
@@ -64,11 +102,11 @@ function Process(array, color){
 
 
 
-function Memory_Manager(strtY){
+function Memory_Manager(strtY, time){
 
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	ctx.fillStyle = "black";
-	ctx.font = "25px Tahoma";
+	ctx.font = "30px Tahoma";
 	var height = canvas.height/10;
 	var mem_width = canvas.width/10.5;
 	var job_width = canvas.width/(job_list.length+1);
@@ -79,14 +117,17 @@ function Memory_Manager(strtY){
 	var queueTotal = 0;
 	var sum_cpu = 0;
 
-	var throughput = 0;
+	ctx.fillText("Time: "+time, startX+canvas.width/2, canvas.height*0.99 );
+
+	// if(time != 0)
+	// 	tp_ff += (finished_ff/time);
 	var fragmentation = 0;
 	var used = 0;
 	var unused = 0;
 	var waiting_time = 0;
 
 	//FIRST-FIT
-
+	ctx.font = "25px Tahoma";
 	ctx.fillText("First-Fit", startX+canvas.width/2, canvas.height/50 );
 
 	//Process
@@ -96,12 +137,12 @@ function Memory_Manager(strtY){
 				if(ff_job_list[j].size <= ff_memory_list[i].size ){
 					ff_memory_list[i].allocate(ff_job_list[j]);
 					// answer.push(ff_job_list[j].stream);
-					throughput++;
+					// throughput++;
 					ff_job_list.splice(j, 1);
 					break;
 				}
 			} else{
-				throughput++;
+				// throughput++;
 				break;
 			}
 		}
@@ -115,6 +156,8 @@ function Memory_Manager(strtY){
 		} else{
 			ctx.fillStyle = ff_memory_list[i].process.color;
 			fragmentation+=ff_memory_list[i].internal_frag();
+			// used+=ff_memory_list[i].used_memory();
+			// unused+=ff_memory_list[i].internal_frag();
 			used++;
 		}
 		
@@ -155,19 +198,31 @@ function Memory_Manager(strtY){
 	var tempX = queueX
 
 	ctx.font = "30px Tahoma";
-	ctx.fillText("1. Throughput: ", tempX+job_width, tempY+=height*1.29 );
-	ctx.fillText("2.1 Storage utilization (used): "+((used/memory_list.length)*100)+"%", tempX+job_width, tempY+=30 );
-	ctx.fillText("2.2 Storage utilization (unused): "+((unused/memory_list.length)*100)+"%", tempX+job_width, tempY+=30 );
+	ctx.fillText("1. Throughput: "+tp_ff, tempX+job_width, tempY+=height*1.29 );
+	if(ff_job_list.length > 1){
+		ctx.fillText("2. Storage utilization (used): ", tempX+job_width, tempY+=30 );
+		(storage_ff+=(used/10)*100);
+	} else{
+		ctx.fillText("2. Storage utilization (AVE): "+(storage_ff), tempX+job_width, tempY+=30 );
+	}
+	// console.log(used, unused);
+	// ctx.fillText("2.2 Storage utilization (unused): "+((unused/memory_list.length)*100)+"%", tempX+job_width, tempY+=30 );
+	tempY+=30;
 	
 	tempX+=(mem_width*5);
 	tempY = startY;
 
 	ctx.fillText("3. Waiting queue length: "+ff_job_list.length, tempX+job_width, tempY+=height*1.29 );
 	ctx.fillText("4. Waiting time in queue (AVE): "+(waiting_time/ff_job_list.length), tempX+job_width, tempY+=30 );
+	console.log(waiting_time);
 	ctx.fillText("5. Internal Fragmentation: "+fragmentation, tempX+job_width, tempY+=30 );
 
 	//WORST-FIT
-	throughput = 0;
+	// if(time != 0){
+	// 	tp_wf += (finished_wf/time);
+	// }
+	// console.log(finished_wf, time);
+	// console.log(tp_wf);
 	used = 0;
 	unused = 0;
 	waiting_time = 0;
@@ -217,6 +272,8 @@ function Memory_Manager(strtY){
 			ctx.fillStyle = wf_memory_list[i].process.color;
 			fragmentation+=wf_memory_list[i].internal_frag();
 			used++;
+			// used+=wf_memory_list[i].used_memory();
+			// unused+=wf_memory_list[i].internal_frag();
 		}
 		
 		ctx.fillRect(queueX+5, globalY, mem_width-10, height);
@@ -254,10 +311,16 @@ function Memory_Manager(strtY){
 	tempY = globalY;
 
 	ctx.font = "30px Tahoma";
-	ctx.fillText("1. Throughput: ", tempX+job_width, tempY+=height*1.29 );
-	ctx.fillText("2.1 Storage utilization (used): "+((used/wf_memory_list.length)*100)+"%", tempX+job_width, tempY+=30 );
-	ctx.fillText("2.2 Storage utilization (unused): "+((unused/wf_memory_list.length)*100)+"%", tempX+job_width, tempY+=30 );
+	ctx.fillText("1. Throughput: "+tp_wf, tempX+job_width, tempY+=height*1.29 );
+	if(wf_job_list.length > 1){
+		ctx.fillText("2. Storage utilization (used): ", tempX+job_width, tempY+=30 );
+		storage_wf+=(used/10)*100;
+	} else{
+		ctx.fillText("2. Storage utilization (AVE): "+((storage_wf)), tempX+job_width, tempY+=30 );
+	}
 	
+	// ctx.fillText("2.2 Storage utilization (unused): "+((unused/wf_memory_list.length)*100)+"%", tempX+job_width, tempY+=30 );
+	tempY+=30;
 	tempX+=(mem_width*5);
 	tempY = globalY;
 
@@ -267,7 +330,8 @@ function Memory_Manager(strtY){
 
 
 	// BEST-FIT
-	throughput = 0;
+	// if(time != 0)
+	// 	tp_bf += (finished_bf/time);
 	used = 0;
 	unused = 0;
 	waiting_time = 0;
@@ -305,6 +369,8 @@ function Memory_Manager(strtY){
 			ctx.fillStyle = bf_memory_list[i].process.color;
 			fragmentation+=bf_memory_list[i].internal_frag();
 			used++;
+			// used+=bf_memory_list[i].used_memory();
+			// unused+=bf_memory_list[i].internal_frag();
 		}
 		
 		ctx.fillRect(queueX+5, globalY, mem_width-10, height);
@@ -342,10 +408,16 @@ function Memory_Manager(strtY){
 	tempY = globalY;
 
 	ctx.font = "30px Tahoma";
-	ctx.fillText("1. Throughput: ", tempX+job_width, tempY+=height*1.29 );
-	ctx.fillText("2.1 Storage utilization (used): "+((used/wf_memory_list.length)*100)+"%", tempX+job_width, tempY+=30 );
-	ctx.fillText("2.2 Storage utilization (unused): "+((unused/wf_memory_list.length)*100)+"%", tempX+job_width, tempY+=30 );
-	
+	ctx.fillText("1. Throughput: "+tp_bf, tempX+job_width, tempY+=height*1.29 );
+
+	if(bf_job_list.length > 1){
+		ctx.fillText("2. Storage utilization (used): ", tempX+job_width, tempY+=30 );
+		storage_bf+=(used/10)*100
+	} else{
+		ctx.fillText("2. Storage utilization (AVE): "+((storage_bf)), tempX+job_width, tempY+=30 );
+	}
+	// ctx.fillText("2.2 Storage utilization (unused): "+((unused/wf_memory_list.length)*100)+"%", tempX+job_width, tempY+=30 );
+	tempY+=30;
 	tempX+=(mem_width*5);
 	tempY = globalY;
 
@@ -354,9 +426,9 @@ function Memory_Manager(strtY){
 	ctx.fillText("5. Internal Fragmentation: "+fragmentation, tempX+job_width, tempY+=30 );
 }
 
-function processJobs(memory_list){
+function processJobs(memory_list, type){
 	for(var i = 0; i < memory_list.length; i++){
-		memory_list[i].processed();
+		memory_list[i].processed(type);
 	}
 }
 
@@ -399,16 +471,42 @@ bf_memory_list.sort(function(a, b){
 	return a.size - b.size;
 });
 
-var time = 0;
+function MemoryBlocksUsed(memory_list){
+	for(var i = 0; i < memory_list.length; i++){
+		if(memory_list[i].occupied()){
+			return false;
+		}
+	}
+	return true;
+}
+
+var ff_flag = true;
+var wf_flag = true;
+var bf_flag = true;
 
 setInterval(function(){
-	Memory_Manager(15);
-	processJobs(ff_memory_list);
-	processJobs(wf_memory_list);
-	processJobs(bf_memory_list);
+	Memory_Manager(15, time);
+	processJobs(ff_memory_list, 1);
+	processJobs(wf_memory_list, 2);
+	processJobs(bf_memory_list, 3);
 	// console.log(answer);
+	if(MemoryBlocksUsed(ff_memory_list) && ff_flag){
+		storage_ff = storage_ff/time;
+		ff_flag = false;
+	}
+
+	if(MemoryBlocksUsed(wf_memory_list) && wf_flag){
+		storage_wf = storage_wf/time;
+		wf_flag = false;
+	}
+
+	if(MemoryBlocksUsed(bf_memory_list) && bf_flag){
+		storage_bf = storage_bf/time;
+		bf_flag = false;
+	}
+
 	time++;
-}, 3000);
+}, 1000);
 
 
 // drawResources(algorithms, sample_process);
